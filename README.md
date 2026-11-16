@@ -14,25 +14,36 @@
 
 | 服务 | 地址 |
 |------|------|
-| 页面 | http://localhost:3213 |
-| 接口 | http://localhost:8213 |
-| PostgreSQL | localhost:54413（库名 `germination`） |
+| 页面 | http://localhost:3417 |
+| 接口 | http://localhost:8417 |
+| PostgreSQL | localhost:54617（库名 `germination`） |
 
 ## 账号
 
 | 用户 | 密码 | 权限 |
 |------|------|------|
-| admin | 123456 | 核算员，可按现行口径出数。登录页已填好 |
+| admin | 123456 | 核算员，可按现行口径出数、可判定霉粒 |
+| primary | pri123456 | 主检，可判定霉粒 |
+| deputy | dep123456 | 副检，可判定霉粒 |
 | witness | wit123456 | 见证员，只能查看 |
+
+## 霉粒清洗的写入策略
+
+**霉态判定与霉粒写入同一入口：先判定，再写入。**
+
+- 写进策略后不许换：接口只认 `judge_first` 这一种顺序。传 `write_first`、`先写后判` 之类的说法，一律在入口处拦下，返回 400 和 `blocked: true`，一行霉态都不落库。
+- 判定不过就整笔回滚：单床判定抛错不写；整笔判定（`/mold/batch`）里任何一床判不过，这一笔的每一床都不落库，重判通过后才整体写入。
+- 霉态库（`mold_states`）只有 `judge_and_write_mold()` 一处写它，没有第二条写入路径。旧库 `beds.moldy` 列启动时搬进霉态库后即被删除。
+- 主检与副检同时抢同一床霉粒时，按批次和床次加锁；后到的一笔读到版本已变，不覆盖霉态，只把霉粒争用说明写进 `mold_contention_notes`，并在霉粒列表旁显示。
+- 分母详情与霉粒列表同一来源（霉态库）。每次出数都记下当时的霉态合计，出数记录上直接标出“与霉粒列表一致”或“对不上”。
 
 ## 启动
 
 ```bash
-cd projects/03-germination-protocol
 docker compose up --build
 ```
 
-健康检查：`GET http://localhost:8213/api/health`
+健康检查：`GET http://localhost:8417/api/health`
 
 ## 种子数据
 

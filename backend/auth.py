@@ -1,7 +1,8 @@
+from datetime import datetime, timedelta, timezone
+
 import hashlib
 import hmac
 import os
-from datetime import datetime, timedelta, timezone
 
 import jwt
 
@@ -13,9 +14,13 @@ def _digest(password: str) -> str:
     return hashlib.sha256(f"{SALT}:{password}".encode()).hexdigest()
 
 
+# role: writer 能出数、能判定霉粒；reader 只能核对。
+# title 就是霉粒列表里记的判定人身份（主检 / 副检 / 核算员）。
 USERS = {
     "admin": {"role": "writer", "digest": _digest("123456"), "title": "核算员"},
     "witness": {"role": "reader", "digest": _digest("wit123456"), "title": "见证员"},
+    "primary": {"role": "writer", "digest": _digest("pri123456"), "title": "主检"},
+    "deputy": {"role": "writer", "digest": _digest("dep123456"), "title": "副检"},
 }
 
 
@@ -48,4 +53,4 @@ def read_user(authorization: str | None):
     user = USERS.get(username)
     if not user:
         return None
-    return {"username": username, "role": payload.get("role"), "title": user["title"]}
+    return {"username": username, "role": user["role"], "title": user["title"]}
